@@ -1,0 +1,52 @@
+from web3 import Web3
+from web3.middleware import geth_poa_middleware
+
+# Connect to an Ethereum node
+web3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/your-infura-project-id'))
+
+# Add the geth_poa_middleware for PoA networks like Rinkeby
+web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+def transfer_eth(sender_private_key, sender_address, recipient_address, amount):
+    try:
+        # Convert the addresses to checksum addresses
+        sender_checksum_address = Web3.toChecksumAddress(sender_address)
+        recipient_checksum_address = Web3.toChecksumAddress(recipient_address)
+
+        # Get the nonce for the sender address
+        nonce = web3.eth.get_transaction_count(sender_checksum_address)
+
+        # Build the transaction
+        tx = {
+            'nonce': nonce,
+            'to': recipient_checksum_address,
+            'value': web3.toWei(amount, 'ether'),
+            'gas': 21000,
+            'gasPrice': web3.eth.gas_price,
+        }
+
+        # Sign the transaction
+        signed_tx = web3.eth.account.sign_transaction(tx, sender_private_key)
+
+        # Send the signed transaction
+        tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+        return tx_hash.hex()
+    except Exception as e:
+        return str(e)
+
+def main():
+    sender_private_key = input("Enter the private key of the sender address: ")
+    sender_address = input("Enter the sender address: ")
+    recipient_address = input("Enter the recipient address: ")
+    amount = float(input("Enter the amount to transfer (in Ether): "))
+
+    tx_hash = transfer_eth(sender_private_key, sender_address, recipient_address, amount)
+
+    if tx_hash:
+        print(f"Transaction sent successfully. Transaction hash: {tx_hash}")
+    else:
+        print("Failed to send the transaction.")
+
+if __name__ == '__main__':
+    main()
